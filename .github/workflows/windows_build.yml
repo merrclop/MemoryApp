@@ -1,6 +1,9 @@
 name: Windows Build
 on: [push, workflow_dispatch]
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true  # Виправляємо попередження з твого скріншоту
+
 jobs:
   build:
     runs-on: windows-latest
@@ -18,17 +21,20 @@ jobs:
 
       - name: Build App
         run: |
-          qmake memory.pro
+          # Шукаємо будь-який .pro файл, щоб не помилитися з назвою
+          $proFile = Get-ChildItem -Filter *.pro | Select-Object -First 1
+          qmake $proFile.Name
           mingw32-make
 
       - name: Package with windeployqt
         run: |
-          # Створюємо папку для релізу
           mkdir release_folder
-          cp Memory.exe release_folder/
-          cp *.png release_folder/
-          # Підтягуємо всі DLL
-          windeployqt --dir release_folder release_folder/Memory.exe
+          # Копіюємо EXE (шукаємо його в папці release або поточній)
+          Get-ChildItem -Filter *.exe | Copy-Item -Destination release_folder/
+          Get-ChildItem -Filter *.png | Copy-Item -Destination release_folder/
+          # Запускаємо деплой
+          $exeFile = Get-ChildItem -Path release_folder -Filter *.exe | Select-Object -First 1
+          windeployqt --dir release_folder $exeFile.FullName
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
