@@ -1,0 +1,37 @@
+name: Windows Build
+on: [push, workflow_dispatch]
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v3
+        with:
+          version: '6.5.0'
+          host: 'windows'
+          target: 'desktop'
+          arch: 'win64_mingw'
+
+      - name: Build App
+        run: |
+          qmake memory.pro
+          mingw32-make
+
+      - name: Package with windeployqt
+        run: |
+          # Створюємо папку для релізу
+          mkdir release_folder
+          cp Memory.exe release_folder/
+          cp *.png release_folder/
+          # Підтягуємо всі DLL
+          windeployqt --dir release_folder release_folder/Memory.exe
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Memory_Windows_App
+          path: release_folder/
